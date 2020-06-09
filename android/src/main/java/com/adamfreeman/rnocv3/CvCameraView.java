@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.util.Log;
@@ -17,12 +18,11 @@ import android.view.SurfaceHolder;
 import android.view.TextureView;
 import android.util.Base64;
 import android.view.OrientationEventListener;
-import android.util.Log;
+
 import androidx.core.content.ContextCompat;
 
 import org.opencv.videoio.VideoWriter;
 import org.opencv.android.Utils;
-import org.opencv.android.JavaCameraView;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.MatOfPoint2f;
@@ -46,8 +46,7 @@ import java.io.InputStream;
 import java.io.File;
 import java.lang.Runnable;
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Arrays;
 
 enum whichOne {
     FACE_CLASSIFIER,
@@ -58,51 +57,51 @@ enum whichOne {
 
 class RecordVidBlock implements Runnable {
 
-	ReadableMap options;
-	int width;
-	int height;
-	Promise promise;
-	
-   	public RecordVidBlock(ReadableMap options, Promise promise) {
-		this.options = options;
-		this.promise = promise;
-   	}
-   
+    ReadableMap options;
+    int width;
+    int height;
+    Promise promise;
+
+    public RecordVidBlock(ReadableMap options, Promise promise) {
+        this.options = options;
+        this.promise = promise;
+    }
+
     public void setWidth(int width) {
-        this.width = width;	
+        this.width = width;
     }
-	
+
     public void setHeight(int height) {
-        this.height = height;	
+        this.height = height;
     }
-	
-   	public void run() {
+
+    public void run() {
         WritableNativeMap result = new WritableNativeMap();
         result.putInt("width", width);
         result.putInt("height", height);
         result.putString("uri", options.getString("filename"));
         promise.resolve(result);
-   	}
+    }
 }
 
 class TakePicBlock implements Runnable {
 
-	Mat mat;
-	ReadableMap options;
-	Promise promise;
-	
-   	public TakePicBlock(ReadableMap options, Promise promise) {
-		this.options = options;
-		this.promise = promise;
-   	}
+    Mat mat;
+    ReadableMap options;
+    Promise promise;
 
-   	public void setMat(Mat mat) {
-	   this.mat = mat;
-   	}
-   
-   	public void run() {
+    public TakePicBlock(ReadableMap options, Promise promise) {
+        this.options = options;
+        this.promise = promise;
+    }
+
+    public void setMat(Mat mat) {
+        this.mat = mat;
+    }
+
+    public void run() {
         FileUtils.getInstance().matToImage(mat, options.getString("filename"), promise);
-   	}
+    }
 }
 
 class InitCameraBlock implements Runnable {
@@ -126,49 +125,49 @@ class InitCameraBlock implements Runnable {
     }
 }
 
-public class CvCameraView extends JavaCameraView implements CvCameraViewListener2 {
+public class CvCameraView extends PortraitJavaCameraView implements CvCameraViewListener2 {
 
     private static final String TAG = CvCameraView.class.getSimpleName();
 
-    public  SurfaceHolder          mHolder;
-    public  ThemedReactContext     mContext;
+    public SurfaceHolder mHolder;
+    public ThemedReactContext mContext;
 
     // params
-    private ReadableMap            mOverlay;
-    private Mat                    mOverlayMat;
-    private int                    mOverlayInterval = 0;
-    private ReadableMap            mCvInvokeGroup;
-    private int                    mCameraFacing;
-    private CascadeClassifier      mFaceClassifier;
-    private CascadeClassifier      mEyesClassifier;
-    private CascadeClassifier      mNoseClassifier;
-    private CascadeClassifier      mMouthClassifier;
-    private boolean                mSuckUpFrames;
-    private Facemark               mLandmarks;
+    private ReadableMap mOverlay;
+    private Mat mOverlayMat;
+    private int mOverlayInterval = 0;
+    private ReadableMap mCvInvokeGroup;
+    private int mCameraFacing;
+    private CascadeClassifier mFaceClassifier;
+    private CascadeClassifier mEyesClassifier;
+    private CascadeClassifier mNoseClassifier;
+    private CascadeClassifier mMouthClassifier;
+    private boolean mSuckUpFrames;
+    private Facemark mLandmarks;
 
-    private static final Scalar    FACE_RECT_COLOR     = new Scalar(255, 255, 0, 255);
-    private boolean                mUseLandmarks       = false;
-    private boolean                mUseFaceDetection   = false;
-    private boolean                mUpdateOverlay      = false;
-    private boolean                mSendFrameSize      = true;
-    private float                  mRelativeFaceSize   = 0.2f;
-    private int                    mAbsoluteFaceSize   = 0;
-    private int                    mRotation           = -1;
-    private int                    mRecRotation        = -1;
-    private long                   mCurrentMillis      = -1;
-    private int                    mCurrOverlayIndex   = -1;
-    private boolean				   mTakePicture	       = false;
-	private TakePicBlock	       takePicBlock;
-	private RecordVidBlock	       recordVidBlock;
-	private InitCameraBlock        initCameraBlock;
-	
-	// video and audio recording stuff
-	private VideoWriter 	       mVideoWriter        = null;
-	private boolean	               mRecording          = false;
-	private ReadableMap	   		   mVideoOptions;
-	
+    private static final Scalar FACE_RECT_COLOR = new Scalar(255, 255, 0, 255);
+    private boolean mUseLandmarks = false;
+    private boolean mUseFaceDetection = false;
+    private boolean mUpdateOverlay = false;
+    private boolean mSendFrameSize = true;
+    private float mRelativeFaceSize = 0.2f;
+    private int mAbsoluteFaceSize = 0;
+    private int mRotation = -1;
+    private int mRecRotation = -1;
+    private long mCurrentMillis = -1;
+    private int mCurrOverlayIndex = -1;
+    private boolean mTakePicture = false;
+    private TakePicBlock takePicBlock;
+    private RecordVidBlock recordVidBlock;
+    private InitCameraBlock initCameraBlock;
+
+    // video and audio recording stuff
+    private VideoWriter mVideoWriter = null;
+    private boolean mRecording = false;
+    private ReadableMap mVideoOptions;
+
     public CvCameraView(ThemedReactContext context, int cameraFacing) {
-        super( context, cameraFacing);
+        super(context, cameraFacing);
         Log.d(TAG, "Creating and setting view");
         mCameraFacing = cameraFacing;
         mContext = context;
@@ -185,7 +184,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
         if (ContextCompat.checkSelfPermission(getContext(),
-            	Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             this.initCameraBlock = new InitCameraBlock(this, null);
             this.initCameraBlock.run();
         }
@@ -210,17 +209,17 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-      super.surfaceCreated( holder);
-      Log.d(TAG, "In surfaceCreated ...");
+        super.surfaceCreated(holder);
+        Log.d(TAG, "In surfaceCreated ...");
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        super.surfaceChanged( holder, format, w, h);
+        super.surfaceChanged(holder, format, w, h);
 
         Log.d(TAG, "In surfaceChanged ...");
 
-        if (mHolder.getSurface() == null){
+        if (mHolder.getSurface() == null) {
             Log.e(TAG, "In surfaceChanged surface is null ...");
             // preview surface does not exist
             return;
@@ -228,8 +227,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
         try {
             this.enableView();
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             Log.e("CameraPreview", "Error enabling camera preview: " + e.getMessage());
         }
     }
@@ -251,34 +249,32 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
     }
 
     private File readClassifierFile(String cascadeClassifier) {
-      File cascadeFile = null;
-      try {
-          // load cascade file from application resources
-          InputStream is = mContext.getAssets().open(cascadeClassifier);
+        File cascadeFile = null;
+        try {
+            // load cascade file from application resources
+            InputStream is = mContext.getAssets().open(cascadeClassifier);
 
-          if (is == null) {
-              Log.e(TAG, "Input stream is nullified!");
-          }
+            if (is == null) {
+                Log.e(TAG, "Input stream is nullified!");
+            }
 
-          File cacheDir = mContext.getCacheDir();
+            File cacheDir = mContext.getCacheDir();
 
-          cascadeFile = new File(cacheDir, cascadeClassifier);
-          FileOutputStream os = new FileOutputStream(cascadeFile);
+            cascadeFile = new File(cacheDir, cascadeClassifier);
+            FileOutputStream os = new FileOutputStream(cascadeFile);
 
-          byte[] buffer = new byte[4096];
-          int bytesRead;
-          while ((bytesRead = is.read(buffer)) != -1) {
-              os.write(buffer, 0, bytesRead);
-          }
-          is.close();
-          os.close();
-      }
-      catch (java.io.IOException ioe) {
-          Log.e(TAG, "Failed to load cascade. IOException thrown: " + ioe.getMessage());
-      }
-      finally {
-          return cascadeFile;
-      }
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            is.close();
+            os.close();
+        } catch (java.io.IOException ioe) {
+            Log.e(TAG, "Failed to load cascade. IOException thrown: " + ioe.getMessage());
+        } finally {
+            return cascadeFile;
+        }
     }
 
     public void setOverlay(ReadableMap overlay) {
@@ -286,7 +282,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
         if (overlay != null) {
             mOverlay = overlay;
             int matIndex = overlay.getInt("matIndex");
-            Mat overlayMat = (Mat)MatManager.getInstance().matAtIndex(matIndex);
+            Mat overlayMat = (Mat) MatManager.getInstance().matAtIndex(matIndex);
             if (mOverlayMat == null) {
                 mOverlayMat = new Mat(overlayMat.rows(), overlayMat.cols(), CvType.CV_8UC4);
             }
@@ -318,8 +314,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
             if (classifier.empty()) {
                 Log.e(TAG, "Failed to load cascade classifier");
                 classifier = null;
-            }
-            else {
+            } else {
                 Log.i(TAG, "Loaded classifier from " + cascadeFile.getAbsolutePath());
             }
             cascadeFile.delete();
@@ -357,12 +352,10 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
         try {
             return BAOS.toByteArray();
-        }
-        finally {
+        } finally {
             try {
                 BAOS.close();
-            }
-            catch (IOException e) {
+            } catch (IOException e) {
                 Log.e(TAG, "In toJpeg problem compressing jpeg: ", e);
             }
         }
@@ -393,59 +386,108 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
         double X1 = part.br().x;
         double Y1 = part.br().y;
 
-        double x = X0/widthToUse;
-        double y = Y0/heightToUse;
-        double w = (X1 - X0)/widthToUse;
-        double h = (Y1 - Y0)/heightToUse;
+        double x = X0 / widthToUse;
+        double y = Y0 / heightToUse;
+        double w = (X1 - X0) / widthToUse;
+        double h = (Y1 - Y0) / heightToUse;
 
-        switch(mRotation) {
-          case Core.ROTATE_90_CLOCKWISE:
-              x = Y0/heightToUse;
-              y = 1.0 - X1/widthToUse;
-              w = (Y1 - Y0)/heightToUse;
-              h = (X1 - X0)/widthToUse;
-              break;
-          case Core.ROTATE_180:
-              x = 1.0 - X1/widthToUse;
-              y = 1.0 - Y1/heightToUse;
-              break;
-          case Core.ROTATE_90_COUNTERCLOCKWISE:
-              x = 1.0 - Y1/heightToUse;
-              y = X0/widthToUse;
-              w = (Y1 - Y0)/heightToUse;
-              h = (X1 - X0)/widthToUse;
-              break;
-          default:
-              break;
+        switch (mRotation) {
+            case Core.ROTATE_90_CLOCKWISE:
+                x = Y0 / heightToUse;
+                y = 1.0 - X1 / widthToUse;
+                w = (Y1 - Y0) / heightToUse;
+                h = (X1 - X0) / widthToUse;
+                break;
+            case Core.ROTATE_180:
+                x = 1.0 - X1 / widthToUse;
+                y = 1.0 - Y1 / heightToUse;
+                break;
+            case Core.ROTATE_90_COUNTERCLOCKWISE:
+                x = 1.0 - Y1 / heightToUse;
+                y = X0 / widthToUse;
+                w = (Y1 - Y0) / heightToUse;
+                h = (X1 - X0) / widthToUse;
+                break;
+            default:
+                break;
         }
 
-        sb.append("{\"x\":"+x+",\"y\":"+y+",\"width\":"+w+",\"height\":"+h);
+        sb.append("{\"x\":" + x + ",\"y\":" + y + ",\"width\":" + w + ",\"height\":" + h);
         if (partKey != null) {
-          sb.append("}");
+            sb.append("}");
         }
         return sb.toString();
     }
+
+
+
+    private String eyeJSONV2(Mat eye) {
+        System.out.println("INSIDE FUCKER");
+
+
+        StringBuffer sb = new StringBuffer();
+
+
+        sb.append("[");
+        for (int x = 0; x < eye.cols(); x++) {
+
+            sb.append("[");
+
+            for (int y = 0; y < eye.rows(); y++) {
+//                 int  p = x * nCols + y * channels;
+//
+//                double[] pixels = image.get(y, x);
+                double[] pixels = eye.get(x, y);
+//                Log.d("ReactNative", "Pixel:" + Arrays.toString(pixels));
+                sb.append("[")
+                        .append(pixels[0]).append(",")
+                        .append(pixels[1]).append(",")
+                        .append(pixels[2]).append("]");
+//                if (pixels.length != 3) {
+//                    Log.d("ReactNative", String.format("Pixels length %d", pixels.length));
+//                }
+
+                if (y < eye.rows() - 1) {
+                    sb.append(",");
+                } else {
+                    sb.append("]");
+                }
+            }
+
+            if (x < eye.cols() - 1) {
+                sb.append(",");
+            } else {
+                sb.append("]");
+            }
+
+        }
+
+
+        return sb.toString();
+
+    }
+
 
     private Point rotatePoint(Mat dFace, Point pt) {
         double newX, newY;
         double widthToUse = dFace.cols();
         double heightToUse = dFace.rows();
-        switch(mRotation) {
+        switch (mRotation) {
             case Core.ROTATE_90_CLOCKWISE:
-                newX = pt.y/heightToUse;
-                newY = 1.0 - pt.x/widthToUse;
+                newX = pt.y / heightToUse;
+                newY = 1.0 - pt.x / widthToUse;
                 break;
             case Core.ROTATE_180:
-                newX = 1.0 - pt.x/widthToUse;
-                newY = 1.0 - pt.y/heightToUse;
+                newX = 1.0 - pt.x / widthToUse;
+                newY = 1.0 - pt.y / heightToUse;
                 break;
             case Core.ROTATE_90_COUNTERCLOCKWISE:
-                newX = 1.0 - pt.y/heightToUse;
-                newY = pt.x/widthToUse;
+                newX = 1.0 - pt.y / heightToUse;
+                newY = pt.x / widthToUse;
                 break;
             default:
-                newX = pt.x/widthToUse;
-                newY = pt.y/heightToUse;
+                newX = pt.x / widthToUse;
+                newY = pt.y / heightToUse;
                 break;
         }
         return new Point(newX, newY);
@@ -471,10 +513,10 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
         WritableMap fsResponse = new WritableNativeMap();
         //Log.d(TAG, "payload is: " + faceInfo);
-        String frameSizeStr = "{\"frameSize\":{\"frameWidth\":" + (double)in.size().width + ",\"frameHeight\":" + (double)in.size().height + "}}";
+        String frameSizeStr = "{\"frameSize\":{\"frameWidth\":" + (double) in.size().width + ",\"frameHeight\":" + (double) in.size().height + "}}";
         fsResponse.putString("payload", frameSizeStr);
         mContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-            .emit("onFrameSize", fsResponse);
+                .emit("onFrameSize", fsResponse);
 
         if (mCameraFacing == 1) {
             Core.flip(in, in, 1);
@@ -498,14 +540,13 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
             if (mFaceClassifier != null && ingray != null) {
                 if (mUseLandmarks) {
                     // more sensitive if determining landmarks
-                    mFaceClassifier.detectMultiScale(ingray, faces, 1.3, 5, 0|Objdetect.CASCADE_SCALE_IMAGE, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+                    mFaceClassifier.detectMultiScale(ingray, faces, 1.3, 5, 0 | Objdetect.CASCADE_SCALE_IMAGE, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
                     mLandmarks.fit(ingray, faces, landmarks);
                     if (landmarks.size() > 0) {
                         landmarksFound = true;
                     }
-                }
-                else {
-                    mFaceClassifier.detectMultiScale(ingray, faces, 1.1, 2, 0|Objdetect.CASCADE_SCALE_IMAGE, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
+                } else {
+                    mFaceClassifier.detectMultiScale(ingray, faces, 1.1, 2, 0 | Objdetect.CASCADE_SCALE_IMAGE, new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
                 }
             }
             Rect[] facesArray = faces.toArray();
@@ -517,15 +558,15 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                 for (int i = 0; i < facesArray.length; i++) {
                     sb.append(getPartJSON(ingray, null, facesArray[i]));
                     String id = "faceId" + i;
-                    sb.append(",\"faceId\":\""+id+"\"");
+                    sb.append(",\"faceId\":\"" + id + "\"");
 
                     if (mEyesClassifier != null ||
-                        mNoseClassifier != null ||
-                        mMouthClassifier != null) {
+                            mNoseClassifier != null ||
+                            mMouthClassifier != null) {
 
                         Rect faceROI = facesArray[i];
                         Mat dFace = ingray.submat(faceROI);
-						
+
                         if (mEyesClassifier != null) {
                             MatOfRect eyes = new MatOfRect();
                             mEyesClassifier.detectMultiScale(dFace, eyes, 1.1, 2);
@@ -534,13 +575,13 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
                             int eye1Index = -1;
                             double centerX = 0.0;
-                            double centerY = (double)facesArray[i].height*0.2;
+                            double centerY = (double) facesArray[i].height * 0.2;
                             if (eyesArray.length > 0) {
                                 double minDist = 10000.0;
-                                for(int j = 0; j < eyesArray.length; j++) {
-                                    centerX = (double)facesArray[i].width*0.3;
-                                    double eyeX = (double)eyesArray[j].x + (double)eyesArray[j].width*0.5;
-                                    double eyeY = (double)eyesArray[j].y + (double)eyesArray[j].height*0.5;
+                                for (int j = 0; j < eyesArray.length; j++) {
+                                    centerX = (double) facesArray[i].width * 0.3;
+                                    double eyeX = (double) eyesArray[j].x + (double) eyesArray[j].width * 0.5;
+                                    double eyeY = (double) eyesArray[j].y + (double) eyesArray[j].height * 0.5;
                                     double dist = calcDistance(centerX, centerY, eyeX, eyeY);
                                     if (dist < minDist) {
                                         minDist = dist;
@@ -548,14 +589,30 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                                     }
                                 }
                                 sb.append(getPartJSON(dFace, "firstEye", eyesArray[eye1Index]));
+                                String firstEyeDataJSON = null;
+                                try {
+
+//                                    Point firstEyeTl = new Point(), firstEyeBr = new Point();
+                                    int eyeX = Double.valueOf(facesArray[i].tl().x + eyesArray[0].tl().x).intValue();
+                                    int eyeY = Double.valueOf(facesArray[i].tl().y + eyesArray[0].tl().y).intValue();
+
+                                    Rect rect = new Rect(eyeX,eyeY, eyesArray[0].width,eyesArray[0].height);
+                                    Mat eyeRect = in.submat(rect);
+                                    firstEyeDataJSON =  eyeJSONV2(eyeRect);
+                                } catch (Exception e) {
+                                    Log.e("ReactNative", "cutting first eye failed up", e);
+                                    firstEyeDataJSON = "[]";
+                                }
+//                                final String firstEyeDataJSON = "[]";
+                                sb.append(",\"firstEyeData\":").append(firstEyeDataJSON);
                             }
                             if (eyesArray.length > 1) {
                                 double minDist = 10000.0;
                                 int eye2Index = -1;
-                                for(int j = 0; j < eyesArray.length; j++) {
-                                    centerX = (double)facesArray[i].width*0.7;
-                                    double eyeX = (double)eyesArray[j].x + (double)eyesArray[j].width*0.5;
-                                    double eyeY = (double)eyesArray[j].y + (double)eyesArray[j].height*0.5;
+                                for (int j = 0; j < eyesArray.length; j++) {
+                                    centerX = (double) facesArray[i].width * 0.7;
+                                    double eyeX = (double) eyesArray[j].x + (double) eyesArray[j].width * 0.5;
+                                    double eyeY = (double) eyesArray[j].y + (double) eyesArray[j].height * 0.5;
                                     double dist = calcDistance(centerX, centerY, eyeX, eyeY);
                                     if (dist < minDist && eye1Index != j) {
                                         minDist = dist;
@@ -563,6 +620,38 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                                     }
                                 }
                                 sb.append(getPartJSON(dFace, "secondEye", eyesArray[eye2Index]));
+                                String secondEyeDataJson = null;
+                                try {
+//                                    Point firstEyeTl = new Point(), firstEyeBr = new Point();
+                                    int eyeX = Double.valueOf(facesArray[i].tl().x + eyesArray[1].tl().x).intValue();
+                                    int eyeY = Double.valueOf(facesArray[i].tl().y + eyesArray[1].tl().y).intValue();
+
+                                    Rect rect = new Rect(eyeX,eyeY, eyesArray[0].width,eyesArray[1].height);
+                                    Mat eyeRect = in.submat(rect);
+                                    secondEyeDataJson =  eyeJSONV2(eyeRect);
+                                } catch (Exception e) {
+                                    Log.e("ReactNative", "cutting first eye failed up", e);
+                                    secondEyeDataJson = "[]";
+                                }
+
+                                sb.append(",\"secondEyeData\":").append(secondEyeDataJson);
+
+
+                                Point firstEyeTl = new Point(), firstEyeBr = new Point();
+                                firstEyeTl.x = facesArray[i].tl().x + eyesArray[0].tl().x;
+                                firstEyeTl.y = facesArray[i].tl().y + eyesArray[0].tl().y;
+                                firstEyeBr.x = firstEyeTl.x + eyesArray[0].width;
+                                firstEyeBr.y = firstEyeTl.y + eyesArray[0].height;
+
+                                Point secondEyeTl = new Point(), secondEyeBr = new Point();
+                                secondEyeTl.x = facesArray[i].tl().x + eyesArray[1].tl().x;
+                                secondEyeTl.y = facesArray[i].tl().y + eyesArray[1].tl().y;
+                                secondEyeBr.x = secondEyeTl.x + eyesArray[1].width;
+                                secondEyeBr.y = secondEyeTl.y + eyesArray[1].height;
+
+                                Imgproc.rectangle(in,firstEyeTl,firstEyeBr,new Scalar(0,255,0),3);
+                                Imgproc.rectangle(in,secondEyeTl,secondEyeBr,new Scalar(0,255,0),3);
+
                             }
                         }
 
@@ -574,11 +663,11 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                             if (nosesArray.length > 0) {
                                 double minDist = 10000.0;
                                 int noseIndex = -1;
-                                for(int j = 0; j < nosesArray.length; j++) {
-                                    double centerX = (double)facesArray[i].width*0.5;
-                                    double centerY = (double)facesArray[i].height*0.5;
-                                    double noseX = (double)nosesArray[j].x + (double)nosesArray[j].width*0.5;
-                                    double noseY = (double)nosesArray[j].y + (double)nosesArray[j].height*0.5;
+                                for (int j = 0; j < nosesArray.length; j++) {
+                                    double centerX = (double) facesArray[i].width * 0.5;
+                                    double centerY = (double) facesArray[i].height * 0.5;
+                                    double noseX = (double) nosesArray[j].x + (double) nosesArray[j].width * 0.5;
+                                    double noseY = (double) nosesArray[j].y + (double) nosesArray[j].height * 0.5;
                                     double dist = calcDistance(centerX, centerY, noseX, noseY);
                                     if (dist < minDist) {
                                         minDist = dist;
@@ -590,9 +679,9 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                         }
 
                         if (mMouthClassifier != null) {
-                            Rect mouthROI = new Rect(0,(int)Math.round(dFace.rows()*0.6),dFace.cols(),(int)Math.round(dFace.rows()*0.4));
+                            Rect mouthROI = new Rect(0, (int) Math.round(dFace.rows() * 0.6), dFace.cols(), (int) Math.round(dFace.rows() * 0.4));
                             Mat dFaceForMouthDetecting = dFace.submat(mouthROI);
-							
+
                             MatOfRect mouths = new MatOfRect();
                             mMouthClassifier.detectMultiScale(dFaceForMouthDetecting, mouths, 1.1, 2);
                             //mMouthClassifier.detectMultiScale(dFaceForMouthDetecting, mouths, 1.1, 2, 0|Objdetect.CASCADE_SCALE_IMAGE, new Size(dFaceW, dFaceH), new Size());
@@ -600,18 +689,18 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                             if (mouthsArray.length > 0) {
                                 double minDist = 10000.0;
                                 int mouthIndex = -1;
-                                for(int j = 0; j < mouthsArray.length; j++) {
-                                    double centerX = (double)facesArray[i].width*0.5;
-                                    double centerY = (double)facesArray[i].height*0.8;
-                                    double mouthX = (double)mouthsArray[j].x + (double)mouthsArray[j].width*0.5;
-                                    double mouthY = (double)mouthsArray[j].y + (double)mouthsArray[j].height*0.5 + (double)facesArray[i].height*0.6;
+                                for (int j = 0; j < mouthsArray.length; j++) {
+                                    double centerX = (double) facesArray[i].width * 0.5;
+                                    double centerY = (double) facesArray[i].height * 0.8;
+                                    double mouthX = (double) mouthsArray[j].x + (double) mouthsArray[j].width * 0.5;
+                                    double mouthY = (double) mouthsArray[j].y + (double) mouthsArray[j].height * 0.5 + (double) facesArray[i].height * 0.6;
                                     double dist = calcDistance(centerX, centerY, mouthX, mouthY);
                                     if (dist < minDist) {
                                         minDist = dist;
                                         mouthIndex = j;
                                     }
                                 }
-                                Rect dRect = new Rect(mouthsArray[mouthIndex].x,(int)Math.round(mouthsArray[mouthIndex].y + dFace.rows()*0.6),mouthsArray[mouthIndex].width,mouthsArray[mouthIndex].height);
+                                Rect dRect = new Rect(mouthsArray[mouthIndex].x, (int) Math.round(mouthsArray[mouthIndex].y + dFace.rows() * 0.6), mouthsArray[mouthIndex].width, mouthsArray[mouthIndex].height);
                                 sb.append(getPartJSON(dFace, "mouth", dRect));
                             }
                         }
@@ -631,17 +720,17 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                                     sb.append(",");
                                 }
                                 /** drawing test code ...
-                                if (mRotation == Core.ROTATE_90_CLOCKWISE || mRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
-                                    newPt.x *= ingray.rows();
-                                    newPt.y *= ingray.cols();
-                                }
-                                else {
-                                    newPt.x *= ingray.cols();
-                                    newPt.y *= ingray.rows();
-                                }
-                                Point pt0 = new Point(newPt.x, newPt.y);
-                                Point pt1 = new Point(newPt.x + 1.0, newPt.y + 1.0);
-                                Imgproc.rectangle(in, pt0, pt1, FACE_RECT_COLOR, 1);
+                                 if (mRotation == Core.ROTATE_90_CLOCKWISE || mRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
+                                 newPt.x *= ingray.rows();
+                                 newPt.y *= ingray.cols();
+                                 }
+                                 else {
+                                 newPt.x *= ingray.cols();
+                                 newPt.y *= ingray.rows();
+                                 }
+                                 Point pt0 = new Point(newPt.x, newPt.y);
+                                 Point pt1 = new Point(newPt.x + 1.0, newPt.y + 1.0);
+                                 Imgproc.rectangle(in, pt0, pt1, FACE_RECT_COLOR, 1);
                                  */
                             }
                             sb.append("]");
@@ -649,10 +738,11 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
                     }
                     if (i != (facesArray.length - 1)) {
                         sb.append("},");
-                    }
-                    else {
+                    } else {
                         sb.append("}");
                     }
+
+                    Imgproc.rectangle(in,facesArray[i].tl(),facesArray[i].br(),new Scalar(0,255,0),3);
                 }
                 sb.append("]}");
                 faceInfo = sb.toString();
@@ -661,7 +751,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
             //Log.d(TAG, "payload is: " + faceInfo);
             response.putString("payload", faceInfo);
             mContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-              .emit("onFacesDetected", response);
+                    .emit("onFacesDetected", response);
         }
 
         boolean sendCallbackData = false;
@@ -671,73 +761,68 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
             long diff = (currMillis - mCurrentMillis);
             if (diff >= mOverlayInterval) {
                 mCurrentMillis = currMillis;
-		        CvInvoke invoker = new CvInvoke(in, ingray);
-		        WritableArray responseArr = invoker.parseInvokeMap(mCvInvokeGroup);
-		        String lastCall = invoker.callback;
-				int dstMatIndex = invoker.dstMatIndex;
-				// TODO: move this into RNOpencv3Util class ...
-		        if (lastCall != null && !lastCall.equals("") && dstMatIndex >= 0 && dstMatIndex < 1000) {
-		            WritableMap response = new WritableNativeMap();
-		            response.putArray("payload", responseArr);
-		            mContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-		                .emit(lastCall, response);
-		        }
-		        else {
-		            // not necessarily error condition unless dstMatIndex >= 1000
-		            if (dstMatIndex == 1000) {
-		                Log.e(TAG, "SecurityException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
-		            }
-		            else if (dstMatIndex == 1001) {
-		                Log.e(TAG, "IllegalAccessException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
-		            }
-		            else if (dstMatIndex == 1002) {
-		                Log.e(TAG, "InvocationTargetException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
-		            }
-		        }
+                CvInvoke invoker = new CvInvoke(in, ingray);
+                WritableArray responseArr = invoker.parseInvokeMap(mCvInvokeGroup);
+                String lastCall = invoker.callback;
+                int dstMatIndex = invoker.dstMatIndex;
+                // TODO: move this into RNOpencv3Util class ...
+                if (lastCall != null && !lastCall.equals("") && dstMatIndex >= 0 && dstMatIndex < 1000) {
+                    WritableMap response = new WritableNativeMap();
+                    response.putArray("payload", responseArr);
+                    mContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                            .emit(lastCall, response);
+                } else {
+                    // not necessarily error condition unless dstMatIndex >= 1000
+                    if (dstMatIndex == 1000) {
+                        Log.e(TAG, "SecurityException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
+                    } else if (dstMatIndex == 1001) {
+                        Log.e(TAG, "IllegalAccessException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
+                    } else if (dstMatIndex == 1002) {
+                        Log.e(TAG, "InvocationTargetException thrown attempting to invoke method.  Check your method name and parameters and make sure they are correct.");
+                    }
+                }
             }
         }
-		
+
         if (mOverlayMat != null) {
             Core.addWeighted(in, 1.0, mOverlayMat, 1.0, 0.0, in);
         }
-		
-		if (mTakePicture) {
-			mTakePicture = false;
-			this.takePicBlock.setMat(in);
-			this.takePicBlock.run();
-		}
+
+        if (mTakePicture) {
+            mTakePicture = false;
+            this.takePicBlock.setMat(in);
+            this.takePicBlock.run();
+        }
 
         if (mRecording) {
-		    if (mVideoWriter == null) {
+            if (mVideoWriter == null) {
                 Size dSize = in.size();
-				mRecRotation = mRotation;
-				if (mRecRotation == Core.ROTATE_90_CLOCKWISE || mRecRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
-				    dSize = new Size(in.size().height, in.size().width);
-			    }
-				
-		        mVideoWriter = new VideoWriter(mVideoOptions.getString("filename"), VideoWriter.fourcc('M', 'J', 'P', 'G'), 30.0, dSize);
-		    }
-			Mat rotMat = new Mat();
-			Core.rotate(in, rotMat, mRecRotation);
-		    mVideoWriter.write(rotMat);
-			rotMat.release();
-		} 
-		else {
-			if (mVideoWriter != null) {
-		    	mVideoWriter.release();
-				mVideoWriter = null;
-				if (mRecRotation == Core.ROTATE_90_CLOCKWISE || mRecRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
-					recordVidBlock.setWidth((int)in.size().height);
-					recordVidBlock.setHeight((int)in.size().width);
-				}
-				else {
-					recordVidBlock.setWidth((int)in.size().width);
-					recordVidBlock.setHeight((int)in.size().height);					
-				}
-				recordVidBlock.run();
-		    }
-		}
-        
+                mRecRotation = mRotation;
+                if (mRecRotation == Core.ROTATE_90_CLOCKWISE || mRecRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
+                    dSize = new Size(in.size().height, in.size().width);
+                }
+
+                mVideoWriter = new VideoWriter(mVideoOptions.getString("filename"), VideoWriter.fourcc('M', 'J', 'P', 'G'), 30.0, dSize);
+            }
+            Mat rotMat = new Mat();
+            Core.rotate(in, rotMat, mRecRotation);
+            mVideoWriter.write(rotMat);
+            rotMat.release();
+        } else {
+            if (mVideoWriter != null) {
+                mVideoWriter.release();
+                mVideoWriter = null;
+                if (mRecRotation == Core.ROTATE_90_CLOCKWISE || mRecRotation == Core.ROTATE_90_COUNTERCLOCKWISE) {
+                    recordVidBlock.setWidth((int) in.size().height);
+                    recordVidBlock.setHeight((int) in.size().width);
+                } else {
+                    recordVidBlock.setWidth((int) in.size().width);
+                    recordVidBlock.setHeight((int) in.size().height);
+                }
+                recordVidBlock.run();
+            }
+        }
+
         if (mSuckUpFrames) {
             // AKA bowel movement!
             Bitmap bm = Bitmap.createBitmap(in.cols(), in.rows(), Bitmap.Config.ARGB_8888);
@@ -747,7 +832,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
             WritableMap response = new WritableNativeMap();
             response.putString("payload", encodedData);
             mContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit("onCameraFrame", response);
+                    .emit("onCameraFrame", response);
         }
         return in;
     }
@@ -759,24 +844,24 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
 
     public void takePicture(TakePicBlock takePicBlock) {
         this.takePicBlock = takePicBlock;
-		mTakePicture = true;
+        mTakePicture = true;
     }
-	
-	public void startRecording(ReadableMap options) {
-		mVideoOptions = options;
-		mRecording = true;
-	}
-	
-	public void stopRecording(RecordVidBlock recordVidBlock) {
-		this.recordVidBlock = recordVidBlock;
-		mRecording = false;
-	}
-	
+
+    public void startRecording(ReadableMap options) {
+        mVideoOptions = options;
+        mRecording = true;
+    }
+
+    public void stopRecording(RecordVidBlock recordVidBlock) {
+        this.recordVidBlock = recordVidBlock;
+        mRecording = false;
+    }
+
     @Override
     protected boolean connectCamera(int width, int height) {
-      boolean supVal = super.connectCamera( width, height);
-      Log.d(TAG, "In connectCamera ...");
-      return supVal;
+        boolean supVal = super.connectCamera(width, height);
+        Log.d(TAG, "In connectCamera ...");
+        return supVal;
     }
 
     /**
@@ -785,7 +870,7 @@ public class CvCameraView extends JavaCameraView implements CvCameraViewListener
      */
     @Override
     protected void disconnectCamera() {
-      super.disconnectCamera( );
-      Log.d(TAG, "In disconnectCamera ...");
+        super.disconnectCamera();
+        Log.d(TAG, "In disconnectCamera ...");
     }
 }

@@ -10,6 +10,7 @@
 #import "CvInvoke.h"
 #import "FileUtils.h"
 #import "MatManager.h"
+#import "React/RCTLog.h"
 
 static CvVideoCamera *videoCamera;
 
@@ -25,13 +26,13 @@ static CvVideoCamera *videoCamera;
     double mCurrentMillis;
     bool mTakePicture;
     bool framesInitialized;
-    
+
     CascadeClassifier face_cascade;
     CascadeClassifier eyes_cascade;
     CascadeClassifier mouth_cascade;
     CascadeClassifier nose_cascade;
-    Ptr<face::Facemark> landmarks;
-    
+    cv::Ptr<face::Facemark> landmarks;
+
     // recording
     cv::VideoWriter mVideoWriter;
     bool mRecording;
@@ -50,7 +51,7 @@ static CvVideoCamera *videoCamera;
         mCurrentMillis = 0;
         self.backgroundColor = [UIColor blackColor];
         self.bridge = bridge;
-        
+
         [[NSNotificationCenter defaultCenter] addObserver:self
                                                  selector:@selector(bridgeDidBackground:)
                                                      name:UIApplicationDidEnterBackgroundNotification
@@ -59,7 +60,7 @@ static CvVideoCamera *videoCamera;
                                                  selector:@selector(bridgeDidForeground:)
                                                      name:UIApplicationWillEnterForegroundNotification
                                                    object:nil];
-        
+
         if (videoCamera != nil) {
             // if more than one camera instance is used there are memory issues ...
             //[videoCamera stop];
@@ -150,6 +151,7 @@ static CvVideoCamera *videoCamera;
     }
 
     NSString *partStr = [NSString stringWithFormat:@"{\"x\":%f,\"y\":%f,\"width\":%f,\"height\":%f", x, y, w, h];
+
     sb = [sb stringByAppendingString:partStr];
 
     if (partKey && ![partKey isEqualToString:@""]) {
@@ -197,6 +199,43 @@ static CvVideoCamera *videoCamera;
     return (distX + distY);
 }
 
+- (NSString*)eyeJSON:(cv::Mat&)mat {
+    cv::Mat rect = mat.clone();
+
+    int channels = rect.channels();
+    int nCols = rect.cols * channels;
+
+    RCTLog(@"Is continuous %i", rect.isContinuous());
+
+    NSMutableString *json = [NSMutableString new];
+    [json appendString:@"["];
+    for(int i = 0; i < rect.rows; i++) {
+        [json appendString:@"["];
+        for(int j = 0; j < rect.cols; j++) {
+            int p = i * nCols + (j * channels);
+            [json appendString:@"["];
+            for(int k = 0; k < channels; k++) {
+                NSString* pixel = [NSString stringWithFormat:@"%i", rect.data[p + k]];
+                [json appendString:pixel];
+                if (k < channels - 1) {
+                    [json appendString:@","];
+                }
+            }
+            [json appendString:@"]"];
+            if (j < rect.cols - 1) {
+                [json appendString:@","];
+            }
+        }
+        [json appendString:@"]"];
+        if (i < rect.rows - 1) {
+            [json appendString:@","];
+        }
+    }
+    [json appendString:@"]"];
+
+    return json;
+}
+
 - (void)processImage:(cv::Mat&)image {
 
     // Do some OpenCV stuff with the image
@@ -204,16 +243,16 @@ static CvVideoCamera *videoCamera;
     cv::Mat image_copy; // image in corrected colorspace ...
     cvtColor(image, image_copy, COLOR_BGR2RGBA);
     cvtColor(image, gray, COLOR_BGR2GRAY);
-    
+
     mWidth = image.cols;
     mHeight = image.rows;
-    
+
     //Log.d(TAG, "payload is: " + faceInfo);
     if (self && self.onFrameSize) {
         NSString *frameSizeStr = [NSString stringWithFormat:@"{\"frameSize\":{\"frameWidth\":%d,\"frameHeight\":%d}}",image.cols,image.rows];
         self.onFrameSize(@{@"payload":frameSizeStr});
     }
-    
+
     if (mUseFaceDetection) {
         std::vector<cv::Rect> faces;
 
@@ -261,7 +300,7 @@ static CvVideoCamera *videoCamera;
                     if (mUseEyesDetection) {
                         std::vector<cv::Rect> eyes;
                         eyes_cascade.detectMultiScale(dFace, eyes, 1.1, 2);
-                        //mEyesClassifier.detectMultiScale(dFace, eyes, 1.1, 2, 0|Objdetect.CASCADE_SCALE_IMAGE, new Size((double)dFaceW, (double)dFaceH), new Size());
+
                         int eye1Index = -1;
                         CGFloat centerX = 0.0f;
                         CGFloat centerY = (CGFloat)faces[i].height*0.2f;
@@ -277,8 +316,51 @@ static CvVideoCamera *videoCamera;
                                     eye1Index = (int)j;
                                 }
                             }
+
                             NSString *firstEyeJSON = [self getPartJSON:dFace partKey:@"firstEye" part:eyes[eye1Index] widthToUse:dFace.cols heightToUse:dFace.rows];
                             payloadJSON = [payloadJSON stringByAppendingString:firstEyeJSON];
+
+                            cv::Point firstEyeTl, firstEyeBr;
+                            firstEyeTl.x = faces[i].tl().x + eyes[0].tl().x;
+                            firstEyeTl.y = faces[i].tl().y + eyes[0].tl().y;
+                            firstEyeBr.x = firstEyeTl.x + eyes[0].width;
+                            firstEyeBr.y = firstEyeTl.y + eyes[0].height;
+
+                            cv::Rect2d rect = cv::Rect2d();
+                            rect.x = firstEyeTl.x;
+                            rect.y = firstEyeTl.y;
+                            rect.width = eyes[0].width;
+                            rect.height = eyes[0].height;
+
+                            cv::Mat eyeRect = image_copy(rect);
+
+//                            int r = arc4random_uniform(1000000);
+//                            NSString* relPath =  [NSString stringWithFormat:@"~/Documents/ala-%i.png", r];
+//                            NSString* outPath = [relPath stringByExpandingTildeInPath];
+
+//                            UIImage *destImage = MatToUIImage(eyeRect);
+//
+//                            NSData* data = UIImagePNGRepresentation(destImage);
+//
+//                            NSError* error;
+//                            BOOL result = [data writeToFile:outPath options:NSDataWritingAtomic error:&error];
+//
+//                            RCTLog(@"Writting to %@", outPath);
+//                            RCTLog(@"File write result: %i", result);
+//
+//                            if (error != nil) {
+//                                RCTLog(@"Write error %@", error);
+//                            }
+
+//                            NSString * firstEyeDataJSON = [self eyeJSON:image_copy tl:firstEyeTl br:firstEyeBr];
+//                            payloadJSON = [payloadJSON stringByAppendingString:@",\"firstEyeData\":"];
+//                            payloadJSON = [payloadJSON stringByAppendingString:firstEyeDataJSON];
+
+                            NSString * firstEyeDataJSON = [self eyeJSON:eyeRect];
+                            payloadJSON = [payloadJSON stringByAppendingString:@",\"firstEyeData\":"];
+                            payloadJSON = [payloadJSON stringByAppendingString:firstEyeDataJSON];
+
+                            rectangle(image_copy, firstEyeTl, firstEyeBr, Scalar(0, 255, 0), 3);
                         }
                         if (eyes.size() > 1) {
                             CGFloat minDist = 10000.0f;
@@ -295,6 +377,26 @@ static CvVideoCamera *videoCamera;
                             }
                             NSString *secondEyeJSON = [self getPartJSON:dFace partKey:@"secondEye" part:eyes[eye2Index] widthToUse:dFace.cols heightToUse:dFace.rows];
                             payloadJSON = [payloadJSON stringByAppendingString:secondEyeJSON];
+
+                            cv::Point secondEyeTl, secondEyeBr;
+                            secondEyeTl.x = faces[i].tl().x + eyes[1].tl().x;
+                            secondEyeTl.y = faces[i].tl().y + eyes[1].tl().y;
+                            secondEyeBr.x = secondEyeTl.x + eyes[1].width;
+                            secondEyeBr.y = secondEyeTl.y + eyes[1].height;
+
+                            cv::Rect2d rect = cv::Rect2d();
+                            rect.x = secondEyeTl.x;
+                            rect.y = secondEyeTl.y;
+                            rect.width = eyes[0].width;
+                            rect.height = eyes[0].height;
+
+                            cv::Mat eyeRect = image_copy(rect);
+
+                            NSString * secondEyeDataJSON = [self eyeJSON:eyeRect];
+                            payloadJSON = [payloadJSON stringByAppendingString:@",\"secondEyeData\":"];
+                            payloadJSON = [payloadJSON stringByAppendingString:secondEyeDataJSON];
+
+                            rectangle(image_copy, secondEyeTl, secondEyeBr, Scalar(0, 255, 0), 3);
                         }
                     }
 
@@ -386,7 +488,7 @@ static CvVideoCamera *videoCamera;
                 else {
                     payloadJSON = [payloadJSON stringByAppendingString:@"}"];
                 }
-                //rectangle(image_copy, faces[i].tl(), faces[i].br(), Scalar( 255, 255, 0 ), 3);
+                rectangle(image_copy, faces[i].tl(), faces[i].br(), Scalar( 255, 255, 0 ), 3);
             }
             payloadJSON = [payloadJSON stringByAppendingString:@"]}"];
         }
@@ -396,21 +498,21 @@ static CvVideoCamera *videoCamera;
         }
     }
     dispatch_async(dispatch_get_main_queue(), ^{
-    
+
         if (self.mCvInvokeGroup != nil) {
             double currMillis = [self.startDate timeIntervalSinceNow];
             double diff = (currMillis - self->mCurrentMillis) * 1000.0;
             diff = (diff < 0.0) ? -diff : diff;
             if (diff >= (double)[self.mOverlayInterval doubleValue]) {
-                
+
                 self->mCurrentMillis = currMillis;
                 self.startDate = [NSDate date];
-                
+
                 CvInvoke *invoker = [[CvInvoke alloc] initWithRgba:image_copy gray:gray];
                 NSArray *responseArr = [invoker parseInvokeMap:self.mCvInvokeGroup];
                 NSString *lastCall = invoker.callback;
                 int dstMatIndex = invoker.dstMatIndex;
-                
+
                 if (lastCall != nil && lastCall != (NSString*)NSNull.null && ![lastCall isEqualToString:@""] && dstMatIndex >= 0 && dstMatIndex < 1000) {
                     if (responseArr && responseArr.count > 0 && self && self.onPayload) {
                         self.onPayload(@{ @"payload" : responseArr });
@@ -424,13 +526,13 @@ static CvVideoCamera *videoCamera;
                 }
             }
         }
-    
+
         if (self.mOverlay != nil) {
             int matIndex = [[self.mOverlay valueForKey:@"matIndex"] intValue];
             Mat overlayMat = [MatManager.sharedMgr matAtIndex:matIndex];
             addWeighted(image_copy, 1.0, overlayMat, 1.0, 0.0, image_copy);
         }
-    
+
         if (self->mTakePicture) {
             self->mTakePicture = false;
             MatWrapper *MW = [[MatWrapper alloc] init];
@@ -448,7 +550,7 @@ static CvVideoCamera *videoCamera;
             self->mRecordingFinished = false;
             self.recordVidBlock([NSNumber numberWithInt:self->mWidth], [NSNumber numberWithInt:self->mHeight], self.mFilename);
         }
-    
+
         UIImage *videoImage = MatToUIImage(image_copy);
         [self setImage:videoImage];
     });
@@ -525,7 +627,7 @@ static CvVideoCamera *videoCamera;
 
     cv::VideoWriter VW;
     VW.open([filename UTF8String], fourcc, 30, size, true);
-    
+
     if (!VW.isOpened() ){
         NSLog(@"Cannot open video writer.");
         return;
